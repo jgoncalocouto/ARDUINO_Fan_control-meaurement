@@ -19,22 +19,22 @@
 //Recording indicator signal constants
 #define CONTROL_PIN 8
 
-// PWM output
-#define PWM_OUTPUT 9
-
 // PWM Encoder
-
 #define PWM_ENCODER A3
 
 // Serial Output-related constants:
-#define N_sensors 5
+#define N_sensors 6
+
+// Duty Cycle Measurement
+#define pulse_ip 10
 
 //Initialize classes---------------------------------------------------------------------------------
 
 LiquidCrystal_I2C lcd = LiquidCrystal_I2C(0x27, 20, 4);
 
 //Variables------------------------------------------------------------------------------------------
-float x1,x2,control,n_measurement, encoder ;
+float x1,x2,control,n_measurement, encoder, period , duty ;
+int ontime,offtime;
 
 //Serial Output-related variables
 int serial_address[N_sensors];
@@ -47,19 +47,21 @@ String display_name[N_sensors] = {
   "P_in",
   "P_out",
   "Freq",
-  "PWM"
+  "PWM",
+  "Duty"
 };
 String display_units[N_sensors] = {
   "[-]",
   "[Pa]",
   "[Pa]",
   "[Hz]",
+  "[%]",
   "[%]"
 };
 int lcd_visualization_group[4] = {
   0,
   1,
-  4,
+  5,
   3,
 };
 
@@ -110,6 +112,7 @@ void setup()
   // Set the PWM pins as output.
   pinMode( 9, OUTPUT);
   pinMode(10, OUTPUT);
+  pinMode(pulse_ip,INPUT);
 
 
 }
@@ -130,6 +133,11 @@ void loop()
   x2 = analogRead(HUBA_PIN_02);
   n_measurement = FreqCount.read();
   encoder = analogRead(PWM_ENCODER)/10;
+  
+  ontime = pulseIn(pulse_ip,HIGH);
+  offtime = pulseIn(pulse_ip,LOW);
+  period = ontime+offtime;
+  duty = (ontime/period)*100;
 
     if (encoder > 100){
     encoder = 100;
@@ -145,6 +153,7 @@ void loop()
   buffer_sensordata[2] = ((x2 / 1023) * 5) * 200 - 100; //Huba Characteristic
   buffer_sensordata[3] = n_measurement;
   buffer_sensordata[4] = encoder;
+  buffer_sensordata[5] = duty;
 
   
   //Serial Output
@@ -165,7 +174,6 @@ void loop()
     lcd.print(" ");
     lcd.print(display_units[lcd_visualization_group[n2]]);
   };
-  pwm_control_value= (int) encoder*3.2;
-  analogWrite25k(PWM_OUTPUT, pwm_control_value)
-  delay(1000);
+
+  delay(250);
 }
